@@ -11,7 +11,6 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 
 # 步驟 4: 安裝所有 Python 依賴套件
-# --no-cache-dir 選項可以減少映像檔的大小
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 步驟 5: 將您專案的所有檔案複製到容器的工作目錄中
@@ -22,8 +21,6 @@ COPY . .
 ENV PORT 8080
 
 # 步驟 7: 定義容器啟動時要執行的指令
-# 我們使用 gunicorn 作為正式環境的 WSGI 伺服器來運行您的 Flask 應用
-# --workers 4: 啟動 4 個工作程序來處理請求
-# --bind 0.0.0.0:$PORT: 監聽所有網路介面指定的 PORT
-# api.index:app: 指向 api/index.py 檔案中的 app 物件
-CMD exec gunicorn --workers 4 --bind 0.0.0.0:$PORT api.index:app
+# (已修改) 移除 --workers 參數，讓 Cloud Run 自動管理
+# 這是在 Cloud Run 環境下的最佳實踐
+CMD exec gunicorn --bind 0.0.0.0:$PORT api.index:app
