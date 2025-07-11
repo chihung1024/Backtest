@@ -5,9 +5,21 @@ import os
 from .routes.backtest_route import backtest_bp
 from .routes.scan_route import scan_bp
 
+# --- 建立靜態檔案的絕對路徑 ---
+# 取得目前檔案 (index.py) 所在的目錄
+# 例如：/app/api/
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 取得專案根目錄 (api/ 的上一層)
+# 例如：/app/
+project_root = os.path.dirname(current_dir)
+# 建立 public 資料夾的絕對路徑
+# 例如：/app/public
+public_folder_path = os.path.join(project_root, 'public')
+
+
 # 建立 Flask 應用實例
-# 並設定靜態檔案的路徑指向 'public' 資料夾
-app = Flask(__name__, static_folder='../public', static_url_path='')
+# 並使用絕對路徑來設定靜態檔案的路徑
+app = Flask(__name__, static_folder=public_folder_path, static_url_path='')
 
 # 註冊藍圖，並為所有路由加上 /api 的前綴
 app.register_blueprint(backtest_bp, url_prefix='/api')
