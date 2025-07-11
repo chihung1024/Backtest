@@ -1,0 +1,26 @@
+# wrangler.toml
+# 這是 Cloudflare Worker 的核心設定檔。
+# 它定義了 Worker 的名稱、入口點、相容性設定以及與其他 Cloudflare 服務的綁定。
+
+name = "backtest-worker-api" # 您可以自訂您的 Worker 名稱
+main = "src/main.py" # Worker 程式碼的入口檔案
+compatibility_date = "2024-05-01" # 使用一個較新的相容性日期以啟用最新功能
+
+# 啟用 Python Workers 所需的標誌
+compatibility_flags = ["python_workers"]
+
+# [[kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "my-database"
+# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# 綁定 R2 儲存桶
+# 這會讓您的 Worker 程式碼中出現一個名為 `DATA_BUCKET` 的全域變數，
+# 您可以用它來讀取 R2 中的數據。
+[[r2_buckets]]
+binding = "DATA_BUCKET" # 在程式碼中使用的變數名稱
+bucket_name = "backtest-data" # 您在 Cloudflare 儀表板上建立的 R2 儲存桶的實際名稱
