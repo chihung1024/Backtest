@@ -3,7 +3,7 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 from cachetools import cached, TTLCache
 import json
-from pathlib import Path
+import requests # 改用 requests 來獲取 JSON，更穩健
 
 # --- 快取設定 ---
 cache = TTLCache(maxsize=256, ttl=1800) # 快取 30 分鐘
@@ -13,13 +13,14 @@ def read_price_data_from_repo(tickers: tuple, start_date_str: str, end_date_str:
     """
     從遠端 GitHub data 分支的 raw URL 讀取 CSV 檔案。
     """
-    # (已修改) 使用 Render 的環境變數，並更新後備值為您新的專案名稱
+    # 使用 Render 的環境變數，並更新後備值為您最新的專案名稱
     owner = os.environ.get('RENDER_GIT_REPO_OWNER', 'chihung1024') 
-    repo = os.environ.get('RENDER_GIT_REPO_SLUG', 'Backtest') # <-- 已將 'stock-backtester' 改為 'Backtest'
+    repo = os.environ.get('RENDER_GIT_REPO_SLUG', 'Backtest') # <-- 確認後備值為 'Backtest'
     
     base_url = f"https://raw.githubusercontent.com/{owner}/{repo}/data/prices"
     
     all_prices = []
+    print(f"--- 開始從 {base_url} 讀取價格數據 ---") # 新增日誌
     for ticker in tickers:
         file_url = f"{base_url}/{ticker}.csv"
         try:
@@ -27,11 +28,14 @@ def read_price_data_from_repo(tickers: tuple, start_date_str: str, end_date_str:
             df.rename(columns={'Close': ticker}, inplace=True)
             all_prices.append(df)
         except Exception as e:
-            print(f"警告：無法從 URL 讀取股票 {ticker} 的價格檔案: {e}")
+            # (新增) 印出更詳細的錯誤日誌，告訴我們是哪個 URL 失敗了
+            print(f"警告：無法從 URL [{file_url}] 讀取股票 {ticker} 的價格檔案: {e}")
 
     if not all_prices:
+        print("--- 警告：未能讀取到任何價格數據 ---") # 新增日誌
         return pd.DataFrame()
 
+    print(f"--- 成功讀取 {len(all_prices)} 支股票的價格數據 ---") # 新增日誌
     combined_df = pd.concat(all_prices, axis=1)
     mask = (combined_df.index >= start_date_str) & (combined_df.index <= end_date_str)
     return combined_df.loc[mask]
@@ -42,15 +46,19 @@ def get_preprocessed_data():
     """
     從遠端 GitHub data 分支的 raw URL 讀取預處理好的 JSON 數據。
     """
-    # (已修改) 使用 Render 的環境變數，並更新後備值為您新的專案名稱
+    # 使用 Render 的環境變數，並更新後備值為您最新的專案名稱
     owner = os.environ.get('RENDER_GIT_REPO_OWNER', 'chihung1024') 
-    repo = os.environ.get('RENDER_GIT_REPO_SLUG', 'Backtest') # <-- 已將 'stock-backtester' 改為 'Backtest'
+    repo = os.environ.get('RENDER_GIT_REPO_SLUG', 'Backtest') # <-- 確認後備值為 'Backtest'
     url = f"https://raw.githubusercontent.com/{owner}/{repo}/data/preprocessed_data.json"
     
+    print(f"--- 正在從 URL [{url}] 讀取預處理數據 ---") # 新增日誌
     try:
-        return pd.read_json(url).to_dict('records')
+        response = requests.get(url)
+        response.raise_for_status()  # 如果請求失敗 (如 404)，會在此拋出錯誤
+        return response.json()
     except Exception as e:
-        print(f"錯誤：無法從 URL 讀取 preprocessed_data.json: {e}")
+        # (新增) 印出詳細的錯誤日誌
+        print(f"致命錯誤：無法從 URL [{url}] 讀取 preprocessed_data.json: {e}")
         return []
 
 
