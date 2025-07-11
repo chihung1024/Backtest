@@ -1,9 +1,14 @@
 # .github/workflows/daily_update.yml
 # 這個 GitHub Actions 工作流程會「每天自動」執行數據更新腳本
+# 同時也允許從 GitHub Actions 頁面手動觸發
 
-name: Scheduled - Daily Data Update to R2
+name: Scheduled and Manual Data Update to R2
 
 on:
+  # 1. 允許手動觸發
+  workflow_dispatch:
+
+  # 2. 每日排程觸發
   schedule:
     # 每天執行一次 (UTC 時間 00:00，約等於台灣時間早上 8 點)
     - cron: '0 0 * * *'
@@ -18,7 +23,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          # 修正: 將 Python 版本從 3.10 升級到 3.11
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
