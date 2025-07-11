@@ -1,15 +1,10 @@
-後端服務核心
 flask
 pandas
 numpy
 cachetools
-
-數據抓取工具
 yfinance
 requests
 beautifulsoup4
 lxml
 tqdm
-
-正式環境伺服器
 gunicorn
