@@ -1,0 +1,32 @@
+# .github/workflows/initial_upload.yml
+# 這個 GitHub Actions 工作流程用於執行「首次」的數據上傳。
+# 它可以從 GitHub 網站上手動觸發。
+
+name: Manual - Initial Data Upload to R2
+
+# 'workflow_dispatch' 允許我們從 Actions 頁面手動運行此工作流程
+on:
+  workflow_dispatch:
+
+jobs:
+  upload-initial-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run data upload script to R2
+        # 使用 GitHub Secrets 來安全地傳入金鑰
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: python update_data_to_r2.py
