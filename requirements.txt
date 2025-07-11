@@ -1,21 +1,9 @@
-requirements.txt
-Cloudflare Python Workers 支援一個子集的 Python 套件。
-這裡列出我們專案重構後所需要的依賴。
-用於從 R2 讀取 CSV 和進行數據操作
 pandas
-
-用於數值計算
 numpy
-
-用於從網路抓取數據 (在 update_data_to_r2.py 中使用)
 yfinance
 beautifulsoup4
 lxml
 requests
 tqdm
-
-用於和 R2 (S3 相容 API) 互動
 boto3
-
-用於在 Worker 中進行路由
 itty-router
