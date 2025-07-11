@@ -6,4 +6,4 @@ lxml
 requests
 tqdm
 boto3
-itty-router
+itty-bitty-router
