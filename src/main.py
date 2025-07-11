@@ -1,13 +1,11 @@
 # src/main.py
-# v3: 使用 Hono 框架重構路由和回應處理，以獲得更好的相容性和功能。
+# v4: 最終修正版。移除所有第三方路由庫，使用原生 if/elif 結構處理路由，以確保最高穩定性。
 
 import json
 import pandas as pd
 import numpy as np
 from io import StringIO
-from hono import Hono              # 導入 Hono 框架
-from hono.js_compatibility import Response # Hono 提供了與 JS Response 相容的物件
-from hono.middleware import cors   # Hono 內建了強大的 CORS 中介軟體
+from js import Response, URL # 導入 Cloudflare 環境提供的標準物件
 
 # --- 核心計算與模擬邏輯 (此部分保持不變) ---
 
@@ -110,40 +108,54 @@ async def run_backtest_simulation(payload, env):
 
     return final_results
 
-# --- API 路由設定 (使用 Hono) ---
+# --- API 處理函式 ---
 
-app = Hono()
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+}
 
-# 使用 Hono 的 CORS 中介軟體，自動處理所有 /api/* 路由的跨域請求
-app.use('/api/*', cors())
-
-@app.get("/api/get_stocks")
-async def handle_get_stocks(c):
-    # Hono 將 env 放在 context 物件 'c' 中
-    r2_object = await c.env.DATA_BUCKET.get("preprocessed_data.json")
+async def handle_get_stocks(request, env):
+    r2_object = await env.DATA_BUCKET.get("preprocessed_data.json")
     if r2_object is None:
-        return Response.json({"error": "Preprocessed data not found in R2 bucket."}, status=404)
+        return Response.json({"error": "Preprocessed data not found in R2 bucket."}, status=404, headers=CORS_HEADERS)
     data = await r2_object.json()
-    return Response.json(data)
+    return Response.json(data, headers=CORS_HEADERS)
 
-@app.post("/api/run_backtest")
-async def handle_backtest(c):
+async def handle_backtest(request, env):
     try:
-        # Hono 的請求物件是 c.req
-        payload = await c.req.json()
-        results = await run_backtest_simulation(payload, c.env)
-        return Response.json(results)
+        payload = await request.json()
+        results = await run_backtest_simulation(payload, env)
+        return Response.json(results, headers=CORS_HEADERS)
     except Exception as e:
-        return Response.json({"error": str(e)}, status=500)
+        return Response.json({"error": str(e)}, status=500, headers=CORS_HEADERS)
 
-@app.post("/api/run_scan")
-async def handle_scan(c):
-    # 掃描邏輯與回測類似，此處從略。
-    return Response.json({"message": "Scan endpoint not fully implemented yet."})
+async def handle_scan(request, env):
+    return Response.json({"message": "Scan endpoint not fully implemented yet."}, headers=CORS_HEADERS)
 
-# --- Worker 主類別 ---
-# Hono 框架本身就可以作為 fetch 處理器
+# --- Worker 主類別與手動路由 ---
+
 class Worker:
     async def fetch(self, request, env, ctx):
-        return await app.fetch(request, env, ctx)
+        # 處理 CORS Preflight 請求
+        if request.method == "OPTIONS":
+            return Response.json({}, headers=CORS_HEADERS)
 
+        # 解析 URL 來取得路徑
+        url = URL.new(request.url)
+        pathname = url.pathname
+
+        # 手動路由分發
+        if request.method == "GET" and pathname == "/api/get_stocks":
+            return await handle_get_stocks(request, env)
+        
+        elif request.method == "POST" and pathname == "/api/run_backtest":
+            return await handle_backtest(request, env)
+            
+        elif request.method == "POST" and pathname == "/api/run_scan":
+            return await handle_scan(request, env)
+            
+        else:
+            # 對於所有其他未匹配的路由，返回 404 Not Found
+            return Response.json({"error": "Not Found"}, status=404, headers=CORS_HEADERS)
